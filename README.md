@@ -54,7 +54,8 @@ The output WAV file itself is **not byte-for-byte identical** to the input file,
 1. Open `index.html` in a modern web browser.
 2. Select or drag a 4-channel ASH True Stereo WAV file onto the converter.
 3. The converted WAV file will be downloaded automatically.
-4. Load the resulting `*_MatrixConv_Lossless.wav` file into SPARTA MatrixConv.
+4. In SPARTA MatrixConv, set **Number of Input Channels** to **2**.
+5. Load the resulting `*_MatrixConv_Lossless.wav` file into SPARTA MatrixConv.
 
 No server, upload, account, or external dependency is required. The WAV file is processed locally in the browser.
 
