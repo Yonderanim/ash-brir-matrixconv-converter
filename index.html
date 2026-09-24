@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ASH True Stereo → SPARTA MatrixConv（样本字节无损版）</title>
+<title>ASH True Stereo → SPARTA MatrixConv (Sample-Byte Lossless)</title>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:620px;margin:50px auto;padding:20px;background:#f5f5f7;color:#1d1d1f}.card{background:#fff;padding:30px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08);text-align:center}h1{font-size:20px;margin:0 0 8px}p{font-size:14px;color:#666;margin-top:0}.drop{border:2px dashed #0071e3;border-radius:12px;padding:42px 20px;background:#fbfbfd;cursor:pointer;margin:20px 0}.drop.hover{background:#e8f2ff}#log{display:none;white-space:pre-wrap;text-align:left;font-size:13px;line-height:1.5;background:#f5f5f7;padding:12px;border-radius:8px}.note{text-align:left;font-size:12px;line-height:1.6;color:#666;margin-top:18px}
 </style>
 </head>
 <body>
 <div class="card">
-<h1>BRIR 格式转换器（样本字节无损版）</h1>
+<h1>BRIR Converter (Sample-Byte Lossless)</h1>
 <p>ASH True Stereo 4ch → SPARTA MatrixConv 2ch</p>
-<div class="drop" id="drop">点击选择或拖拽 4 声道 ASH True Stereo WAV<input id="file" type="file" accept=".wav,audio/wav" hidden></div>
+<div class="drop" id="drop">Click to select or drag & drop a 4-channel ASH True Stereo WAV<input id="file" type="file" accept=".wav,audio/wav" hidden></div>
 <div id="log"></div>
-<div class="note">本版本不使用 AudioContext / decodeAudioData，不重采样，不做浮点转换，不做 DSP。它直接从 WAV data chunk 复制每个采样的原始字节，只改变声道与时间排列。</div>
+<div class="note">This version does not use AudioContext / decodeAudioData, resampling, floating-point conversion, or DSP. It copies the original sample bytes directly from the WAV data chunk and only changes their channel/time arrangement.</div>
 </div>
 <script>
 const drop=document.getElementById('drop'),fileInput=document.getElementById('file'),log=document.getElementById('log');
@@ -27,28 +27,28 @@ function u16(v,o){return v.getUint16(o,true)} function u32(v,o){return v.getUint
 function putU16(v,o,n){v.setUint16(o,n,true)} function putU32(v,o,n){v.setUint32(o,n,true)}
 function str(v,o,n){let s='';for(let i=0;i<n;i++)s+=String.fromCharCode(v.getUint8(o+i));return s}
 async function convert(f){
- if(!f||!/\.wav$/i.test(f.name)){show('错误：请选择 WAV 文件。',true);return}
+ if(!f||!/\.wav$/i.test(f.name)){show('Error: please select a WAV file.',true);return}
  try{
   const buf=await f.arrayBuffer(),view=new DataView(buf);
-  if(str(view,0,4)!=='RIFF'||str(view,8,4)!=='WAVE')throw new Error('不是 RIFF/WAVE 文件。');
+  if(str(view,0,4)!=='RIFF'||str(view,8,4)!=='WAVE')throw new Error('Not a RIFF/WAVE file.');
   let pos=12,fmt=null,dataPos=-1,dataSize=0,chunks=[];
   while(pos+8<=buf.byteLength){
    const id=str(view,pos,4),size=u32(view,pos+4),body=pos+8;
-   if(body+size>buf.byteLength)throw new Error('WAV chunk 超出文件范围。');
+   if(body+size>buf.byteLength)throw new Error('WAV chunk exceeds file bounds.');
    chunks.push({id,pos,size,body});
    if(id==='fmt '&&!fmt){
-    if(size<16)throw new Error('fmt chunk 太短。');
+    if(size<16)throw new Error('fmt chunk is too short.');
     fmt={format:u16(view,body),channels:u16(view,body+2),sampleRate:u32(view,body+4),byteRate:u32(view,body+8),blockAlign:u16(view,body+12),bits:u16(view,body+14),size,pos,body};
    } else if(id==='data'&&dataPos<0){dataPos=body;dataSize=size;}
    pos+=8+size+(size&1);
   }
-  if(!fmt||dataPos<0)throw new Error('找不到有效的 fmt 或 data chunk。');
-  if(fmt.channels!==4)throw new Error(`输入必须是 4 声道，当前是 ${fmt.channels} 声道。`);
-  if(!(fmt.format===1||fmt.format===3||fmt.format===0xFFFE))throw new Error(`暂不支持 WAV format tag 0x${fmt.format.toString(16)}。`);
-  if(fmt.blockAlign%4!==0)throw new Error('无法按 4 声道计算每个采样的字节数。');
+  if(!fmt||dataPos<0)throw new Error('Could not find a valid fmt or data chunk.');
+  if(fmt.channels!==4)throw new Error(`Input must have 4 channels; this file has ${fmt.channels}.`);
+  if(!(fmt.format===1||fmt.format===3||fmt.format===0xFFFE))throw new Error(`Unsupported WAV format tag 0x${fmt.format.toString(16)}.`);
+  if(fmt.blockAlign%4!==0)throw new Error('Cannot determine sample width from the 4-channel frame layout.');
   const bytesPerSample=fmt.blockAlign/4;
-  if(!Number.isInteger(bytesPerSample)||bytesPerSample<1)throw new Error('无效的 sample width。');
-  if(dataSize%fmt.blockAlign!==0)throw new Error('data chunk 不是完整 frame 的整数倍。');
+  if(!Number.isInteger(bytesPerSample)||bytesPerSample<1)throw new Error('Invalid sample width.');
+  if(dataSize%fmt.blockAlign!==0)throw new Error('The data chunk is not an integer number of complete frames.');
   const frames=dataSize/fmt.blockAlign;
   const outBlockAlign=bytesPerSample*2,outDataSize=frames*outBlockAlign*2;
 
@@ -71,7 +71,7 @@ async function convert(f){
   out.set([82,73,70,70,0,0,0,0,87,65,86,69],0);putU32(ov,4,total-8);
   let w=12;for(const p of parts){out.set(p,w);w+=p.length}
   let outDataPos=-1;pos=12;while(pos+8<=out.length){const id=str(ov,pos,4),size=u32(ov,pos+4);if(id==='data'){outDataPos=pos+8;break}pos+=8+size+(size&1)}
-  if(outDataPos<0)throw new Error('内部错误：找不到输出 data chunk。');
+  if(outDataPos<0)throw new Error('Internal error: output data chunk not found.');
 
   const src=new Uint8Array(buf,dataPos,dataSize),dst=new Uint8Array(out.buffer,outDataPos,outDataSize);
   let d=0;
@@ -80,8 +80,8 @@ async function convert(f){
 
   const outName=f.name.replace(/\.wav$/i,'')+'_MatrixConv_Lossless.wav',blob=new Blob([out.buffer],{type:'audio/wav'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=outName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-  show(`转换成功。\n\n输入：4 ch / ${fmt.sampleRate} Hz / ${fmt.bits} bit / format 0x${fmt.format.toString(16)}\n输出：2 ch / ${fmt.sampleRate} Hz / ${fmt.bits} bit / 同一 sample encoding\n\nCH1 = [LL][RL]\nCH2 = [LR][RR]\n\n未使用 AudioContext\n未使用 decodeAudioData\n未重采样\n未做浮点转换\n未做 DSP\n\n每个采样的原始字节只被重新排列，没有被改写。`)
- }catch(e){show('处理失败：'+e.message,true)}
+  show(`Conversion successful.\n\nInput: 4 ch / ${fmt.sampleRate} Hz / ${fmt.bits} bit / format 0x${fmt.format.toString(16)}\nOutput: 2 ch / ${fmt.sampleRate} Hz / ${fmt.bits} bit / same sample encoding\n\nCH1 = [LL][RL]\nCH2 = [LR][RR]\n\nAudioContext: not used\ndecodeAudioData: not used\nResampling: not used\nFloating-point conversion: not used\nDSP: not used\n\nThe original bytes of every sample were copied without modification; only their arrangement was changed.`)
+ }catch(e){show('Processing failed: '+e.message,true)}
 }
 </script>
 </body>
